@@ -1,7 +1,6 @@
 #!/usr/bin/env python3.7
 
 import magic
-import tarfile
 import zipfile
 import rarfile
 import gui

@@ -9,25 +9,33 @@ from PyQt5.QtWidgets import QAbstractSlider
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 
+
 class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
     resized = QtCore.pyqtSignal()
     curImage = ""
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.resized.connect(self.drawImage)
-        self.scrollArea.verticalScrollBar().actionTriggered.connect(self.scrolled)
+        vscrollBar = self.scrollArea.verticalScrollBar()
+        vscrollBar.actionTriggered.connect(self.scrolled)
         self.statusbar.setVisible(False)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_H or event.key() == Qt.Key_P or event.key() == Qt.Key_Backspace:
+        vscrollBar = self.scrollArea.verticalScrollBar()
+        if (event.key() == Qt.Key_H or
+                event.key() == Qt.Key_P or
+                event.key() == Qt.Key_Backspace):
             self.prevImage()
-        elif event.key() == Qt.Key_L or event.key() == Qt.Key_N or event.key() == Qt.Key_Space:
+        elif (event.key() == Qt.Key_L or
+                event.key() == Qt.Key_N or
+                event.key() == Qt.Key_Space):
             self.nextImage()
         elif event.key() == Qt.Key_J:
-            self.scrollArea.verticalScrollBar().triggerAction(QAbstractSlider.SliderSingleStepAdd)
+            vscrollBar.triggerAction(QAbstractSlider.SliderSingleStepAdd)
         elif event.key() == Qt.Key_K:
-            self.scrollArea.verticalScrollBar().triggerAction(QAbstractSlider.SliderSingleStepSub)
+            vscrollBar.triggerAction(QAbstractSlider.SliderSingleStepSub)
         elif event.key() == Qt.Key_B:
             self.statusbar.setVisible(not self.statusbar.isVisible())
             self.drawImage()
@@ -40,11 +48,15 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
         scrollbar = self.scrollArea.verticalScrollBar()
 
         if scrollbar.value() == scrollbar.maximum():
-            if action == QAbstractSlider.SliderSingleStepAdd or action == QAbstractSlider.SliderPageStepAdd or action == QAbstractSlider.SliderToMaximum:
+            if (action == QAbstractSlider.SliderSingleStepAdd or
+                    action == QAbstractSlider.SliderPageStepAdd or
+                    action == QAbstractSlider.SliderToMaximum):
                 self.nextImage()
 
         if scrollbar.value() == scrollbar.minimum():
-            if action == QAbstractSlider.SliderSingleStepSub or action == QAbstractSlider.SliderPageStepSub or action == QAbstractSlider.SliderToMinimum:
+            if (action == QAbstractSlider.SliderSingleStepSub or
+                    action == QAbstractSlider.SliderPageStepSub or
+                    action == QAbstractSlider.SliderToMinimum):
                 self.prevImage()
 
     def setArchive(self, archive):
@@ -62,10 +74,14 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
         pixmap.loadFromData(self.curImage)
 
         # best fit
+        displayHeight = self.height()
         if (self.statusbar.isVisible()):
-            pixmap = pixmap.scaled(self.width(), self.height() - self.statusbar.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        else:
-            pixmap = pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            displayHeight = self.height() - self.statusbar.height()
+
+        pixmap = pixmap.scaled(self.width(),
+                               displayHeight,
+                               Qt.KeepAspectRatio,
+                               Qt.SmoothTransformation)
 
         self.label.setPixmap(pixmap)
 
@@ -79,43 +95,46 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
     def firstImage(self):
         self.setImage(self.archive.getFirstImage(), self.archive.curFile)
         self.drawImage()
-        self.setScrollBar(True);
+        self.setScrollBar(True)
 
     def lastImage(self):
         self.setImage(self.archive.getLastImage(), self.archive.curFile)
         self.drawImage()
-        self.setScrollBar(True);
+        self.setScrollBar(True)
 
     def nextImage(self):
         self.setImage(self.archive.getNextImage(), self.archive.curFile)
         self.drawImage()
-        self.setScrollBar(True);
+        self.setScrollBar(True)
 
     def prevImage(self):
         self.setImage(self.archive.getPrevImage(), self.archive.curFile)
         self.drawImage()
-        self.setScrollBar(False);
+        self.setScrollBar(False)
 
     def resizeEvent(self, event):
         self.resized.emit()
         return super(MangaViewer, self).resizeEvent(event)
 
+
 class MangaArchive():
     def __init__(self, path, mimetype):
         if mimetype == "application/zip":
-            self.archive = zipfile.ZipFile(path, mode='r', compression=zipfile.ZIP_DEFLATED)
+            self.archive = zipfile.ZipFile(path,
+                                           mode='r',
+                                           compression=zipfile.ZIP_DEFLATED)
         elif mimetype == "application/x-rar":
             self.archive = rarfile.RarFile(path)
-
         self.filelist = self.archive.namelist()
         self.filelist.sort()
         self.index = 0
 
     def checkFile(self):
         try:
-            mimetype = magic.from_buffer(self.archive.read(self.curFile), mime=True)
-            return "image" in mimetype;
-        except:
+            mimetype = magic.from_buffer(self.archive.read(self.curFile),
+                                         mime=True)
+            return "image" in mimetype
+        except magic.MagicException:
             return False
 
     def getFirstImage(self):
@@ -161,6 +180,7 @@ class MangaArchive():
         else:
             return self.getPrevImage()
 
+
 def main():
     import sys
 
@@ -186,12 +206,12 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
     window = MangaViewer()
-    
     window.setArchive(archive)
     window.firstImage()
     window.show()
 
     sys.exit(app.exec_())
+
 
 if __name__ == '__main__':
     main()

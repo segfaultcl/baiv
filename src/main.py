@@ -147,7 +147,7 @@ class MangaArchive():
 
     def getLastImage(self):
         self.index = len(self.filelist) - 1
-        self.curFile = [self.index]
+        self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
         else:
@@ -157,7 +157,7 @@ class MangaArchive():
         self.index = self.index + 1
         if (self.index == len(self.filelist)):
             # TODO next archive
-            self.getPrevImage()
+            return self.getPrevImage()
 
         self.curFile = self.filelist[self.index]
         if (self.checkFile()):
@@ -167,6 +167,10 @@ class MangaArchive():
 
     def getPrevImage(self):
         self.index = self.index - 1
+        if (self.index < 0):
+            # TODO prev archive
+            return self.getNextImage()
+
         self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)

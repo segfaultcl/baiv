@@ -107,6 +107,8 @@ class MangaArchive():
         elif mimetype == "application/x-rar":
             self.archive = rarfile.RarFile(path)
 
+        self.filelist = self.archive.namelist()
+        self.filelist.sort()
         self.index = 0
 
     def checkFile(self):
@@ -118,15 +120,15 @@ class MangaArchive():
 
     def getFirstImage(self):
         self.index = 0
-        self.curFile = self.archive.namelist()[self.index]
+        self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
         else:
             return self.getNextImage()
 
     def getLastImage(self):
-        self.index = len(self.archive.namelist()) - 1
-        self.curFile = self.archive.namelist()[self.index]
+        self.index = len(self.filelist) - 1
+        self.curFile = [self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
         else:
@@ -134,11 +136,11 @@ class MangaArchive():
 
     def getNextImage(self):
         self.index = self.index + 1
-        if (self.index == len(self.archive.namelist())):
+        if (self.index == len(self.filelist)):
             # TODO next archive
             self.getPrevImage()
 
-        self.curFile = self.archive.namelist()[self.index]
+        self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
         else:
@@ -146,7 +148,7 @@ class MangaArchive():
 
     def getPrevImage(self):
         self.index = self.index - 1
-        self.curFile = self.archive.namelist()[self.index]
+        self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
         elif self.index == 0:
@@ -154,7 +156,7 @@ class MangaArchive():
         elif self.index < 0:
             # TODO prev archive
             self.index = self.index + 1
-            self.curFile = self.archive.namelist()[self.index]
+            self.curFile = self.filelist[self.index]
             return self.archive.read(self.curFile)
         else:
             return self.getPrevImage()

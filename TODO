@@ -3,6 +3,5 @@ can probably consolidate some functions
 mouse support
 goto page
 zoom, fit height, fit width
-fullscreen (? wm attribute)
 double page
 improve statusbar (number of files, etc)

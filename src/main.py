@@ -44,6 +44,11 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
             self.firstImage()
         elif event.key() == Qt.Key_E:
             self.lastImage()
+        elif event.key() == Qt.Key_F:
+            if self.isFullScreen():
+                self.showNormal()
+            else:
+                self.showFullScreen()
 
     def scrolled(self, action):
         scrollbar = self.scrollArea.verticalScrollBar()
@@ -268,6 +273,7 @@ def main():
             print("\tToggle Statusbar: B")
             print("\tFirst Image: S")
             print("\tLast Image: E")
+            print("\tToggle Fullscreen: F")
             sys.exit()
 
         infile = sys.argv[1]

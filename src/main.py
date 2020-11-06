@@ -1,9 +1,10 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 import magic
 import zipfile
 import rarfile
 import gui
+import os
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QAbstractSlider
 from PyQt5.QtGui import QPixmap
@@ -103,12 +104,37 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
         self.setScrollBar(True)
 
     def nextImage(self):
-        self.setImage(self.archive.getNextImage(), self.archive.curFile)
+        nextImage = self.archive.getNextImage()
+        if nextImage is not None:
+            self.setImage(nextImage, self.archive.curFile)
+        else:
+            directory = Directory(self.archive)
+            nextArchive = directory.getNextArchive(self.archive)
+            if nextArchive is not None:
+                self.archive.close()
+                self.archive = Archive(nextArchive)
+                self.firstImage()
+                return
+            else:
+                self.setImage(self.curImage, self.archive.curFile)
         self.drawImage()
         self.setScrollBar(True)
 
     def prevImage(self):
-        self.setImage(self.archive.getPrevImage(), self.archive.curFile)
+        prevImage = self.archive.getPrevImage()
+        if prevImage is not None:
+            self.setImage(prevImage, self.archive.curFile)
+        else:
+            directory = Directory(self.archive)
+            prevArchive = directory.getPrevArchive(self.archive)
+            if prevArchive is not None:
+                self.archive.close()
+                self.archive = Archive(prevArchive)
+                self.lastImage()
+                return
+            else:
+                self.setImage(self.curImage, self.archive.curFile)
+
         self.drawImage()
         self.setScrollBar(False)
 
@@ -117,17 +143,26 @@ class MangaViewer(QtWidgets.QMainWindow, gui.Ui_MainWindow):
         return super(MangaViewer, self).resizeEvent(event)
 
 
-class MangaArchive():
-    def __init__(self, path, mimetype):
-        if mimetype == "application/zip":
+class Archive():
+    def __init__(self, path):
+        self.path = os.path.abspath(path)
+        self.mimetype = magic.from_file(path, mime=True)
+        if self.mimetype == "application/zip":
             self.archive = zipfile.ZipFile(path,
                                            mode='r',
                                            compression=zipfile.ZIP_DEFLATED)
-        elif mimetype == "application/x-rar":
+        elif self.mimetype == "application/x-rar":
             self.archive = rarfile.RarFile(path)
+        else:
+            self.filelist = None
+            self.index = 0
+            return None
         self.filelist = self.archive.namelist()
         self.filelist.sort()
         self.index = 0
+
+    def close(self):
+        self.archive.close()
 
     def checkFile(self):
         try:
@@ -135,6 +170,8 @@ class MangaArchive():
                                          mime=True)
             return "image" in mimetype
         except magic.MagicException:
+            return False
+        except TypeError:
             return False
 
     def getFirstImage(self):
@@ -155,9 +192,9 @@ class MangaArchive():
 
     def getNextImage(self):
         self.index = self.index + 1
-        if (self.index == len(self.filelist)):
-            # TODO next archive
-            return self.getPrevImage()
+        if (self.index >= len(self.filelist)):
+            self.index = self.index - 1
+            return None
 
         self.curFile = self.filelist[self.index]
         if (self.checkFile()):
@@ -168,21 +205,53 @@ class MangaArchive():
     def getPrevImage(self):
         self.index = self.index - 1
         if (self.index < 0):
-            # TODO prev archive
-            return self.getNextImage()
+            self.index = self.index + 1
+            return None
 
         self.curFile = self.filelist[self.index]
         if (self.checkFile()):
             return self.archive.read(self.curFile)
-        elif self.index == 0:
-            return self.getNextImage()
-        elif self.index < 0:
-            # TODO prev archive
-            self.index = self.index + 1
-            self.curFile = self.filelist[self.index]
-            return self.archive.read(self.curFile)
         else:
             return self.getPrevImage()
+
+
+class Directory():
+    def __init__(self, archive):
+        self.directory = sorted(os.scandir(os.path.dirname(archive.path)),
+                                key=lambda e: e.name)
+
+    def getNextArchive(self, archive):
+        foundCurrent = False
+        for entry in self.directory:
+            if entry.is_file():
+                if foundCurrent:
+                    if isArchive(entry.path):
+                        return entry.path
+                if entry.name == os.path.basename(archive.path):
+                    foundCurrent = True
+        return None
+
+    def getPrevArchive(self, archive):
+        foundCurrent = False
+        lastArchive = None
+
+        for entry in self.directory:
+            if entry.is_file():
+                if entry.name == os.path.basename(archive.path):
+                    return lastArchive
+                if isArchive(entry.path):
+                    lastArchive = entry.path
+        return None
+
+
+def isArchive(archive):
+    try:
+        mimetype = magic.from_file(archive, mime=True)
+        return mimetype == "application/zip" or mimetype == "application/x-rar"
+    except magic.MagicException:
+        return False
+    except TypeError:
+        return False
 
 
 def main():
@@ -201,9 +270,14 @@ def main():
             print("\tLast Image: E")
             sys.exit()
 
-        mimetype = magic.from_file(sys.argv[1], mime=True)
-        if mimetype == "application/zip" or mimetype == "application/x-rar":
-            archive = MangaArchive(sys.argv[1], mimetype)
+        infile = sys.argv[1]
+        archive = None
+        if os.path.exists(infile) and os.path.isfile(infile):
+            archive = Archive(infile)
+
+        if archive is None or archive.filelist is None:
+            print("Usage: " + sys.argv[0] + " /path/to/zip/or/rar/archive")
+            sys.exit()
     else:
         print("Usage: " + sys.argv[0] + " /path/to/zip/or/rar/archive")
         sys.exit()
